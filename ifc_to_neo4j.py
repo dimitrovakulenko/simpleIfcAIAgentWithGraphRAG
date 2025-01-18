@@ -126,6 +126,7 @@ def parse_ifc_and_populate_neo4j(ifc_file_path, driver, database, file_id):
 def process_ifc_file(ifc_file_path, neo4j_uri, neo4j_user, neo4j_password, db_name=None, clean_db=True):
     """
     Process an IFC file and populate a Neo4j database with the extracted data.
+    All IFC entities will become nodes, all links between ifc entities will become links between nodes.
 
     Args:
         ifc_file_path (str): Path to the IFC file to process.
