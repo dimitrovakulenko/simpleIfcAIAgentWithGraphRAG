@@ -1,4 +1,4 @@
-# simple Ifc AI Agent with GraphRAG
+# Simple Ifc AI Agent with GraphRAG
 
 ## Overview
 
