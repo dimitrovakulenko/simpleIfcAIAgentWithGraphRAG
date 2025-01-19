@@ -10,8 +10,6 @@ The project consists of two primary scripts:
 
 This project is modular and can be adapted to other databases or in-memory graph representations with minor adjustments.
 
----
-
 ## How to run
 
 ### Prerequisites 
@@ -52,14 +50,11 @@ This project is modular and can be adapted to other databases or in-memory graph
    - Type your query, and the chatbot will translate it into a database query and return the results.
    - To exit, type `exit`, `quit`, or `bye`.
 
----
-
 ## Limitations
 
 1. Works well only with smaller ifc file, might take ages to upload bigger ifc files to the database
 2. LLM Context window limits are easy to achieve - depends on the questions
-
----
+(a solution for this problem is demonstrated here: https://www.linkedin.com/posts/dmytro-vakulenko-b2a86040_innovation-ifc-ai-agent-variables-activity-7285951367746080768-hRED/ )
 
 ## License
 
