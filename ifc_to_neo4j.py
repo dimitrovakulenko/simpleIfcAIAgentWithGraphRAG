@@ -28,13 +28,12 @@ def clean_database(driver, database_name):
         session.run("MATCH (n) DETACH DELETE n")
     print(f"Database '{database_name}' has been cleaned.")
 
-def create_nodes_in_batch(driver, batch, file_id, database):
+def create_nodes_in_batch(driver, batch, database):
     def create_node(tx, entities):
         for entity in entities:
             entity_type = entity.is_a()
             entity_id = entity.id()
             attributes = entity.get_info()
-            attributes["file_id"] = file_id
             attributes["entity_id"] = entity_id
 
             def is_neo4j_compatible(value):
@@ -43,7 +42,7 @@ def create_nodes_in_batch(driver, batch, file_id, database):
             scalar_attributes = {k: v for k, v in attributes.items() if is_neo4j_compatible(v)}
 
             cypher_query = f"""
-            MERGE (n:{entity_type} {{ entity_id: $entity_id, file_id: $file_id }})
+            MERGE (n:{entity_type} {{ entity_id: $entity_id }})
             SET {", ".join([f"n.{k} = ${k}" for k in scalar_attributes.keys()])}
             """
             tx.run(cypher_query, **scalar_attributes)
@@ -51,11 +50,11 @@ def create_nodes_in_batch(driver, batch, file_id, database):
     with driver.session(database=database) as session:
         session.execute_write(create_node, batch)
 
-def create_relationships_in_batch(driver, batch, file_id, database):
+def create_relationships_in_batch(driver, batch, database):
     def create_relationship(tx, entities):
         cypher_query = """
-        MATCH (a {{entity_id: $start_id, file_id: $file_id}})
-        MATCH (b {{entity_id: $end_id, file_id: $file_id}})
+        MATCH (a {{entity_id: $start_id}})
+        MATCH (b {{entity_id: $end_id}})
         MERGE (a)-[:{rel_name}]->(b)
         MERGE (b)-[:REVERSE_{rel_name}]->(a)
         """
@@ -69,8 +68,7 @@ def create_relationships_in_batch(driver, batch, file_id, database):
                     tx.run(
                         cypher_query.format(rel_name=rel_name),
                         start_id=entity.id(),
-                        end_id=rel_value.id(),
-                        file_id=file_id,
+                        end_id=rel_value.id()
                     )
                 elif isinstance(rel_value, Iterable):
                     if all(isinstance(item, ifcopenshell.entity_instance) for item in rel_value):
@@ -78,8 +76,7 @@ def create_relationships_in_batch(driver, batch, file_id, database):
                             tx.run(
                                 cypher_query.format(rel_name=rel_name),
                                 start_id=entity.id(),
-                                end_id=related_entity.id(),
-                                file_id=file_id,
+                                end_id=related_entity.id()
                             )
 
             if counter % PROCESSING_BATCH_SIZE == 0:
@@ -88,7 +85,7 @@ def create_relationships_in_batch(driver, batch, file_id, database):
     with driver.session(database=database) as session:
         session.execute_write(create_relationship, batch)
 
-def parse_ifc_and_populate_neo4j(ifc_file_path, driver, database, file_id):
+def parse_ifc_and_populate_neo4j(ifc_file_path, driver, database):
     ifc_file = ifcopenshell.open(ifc_file_path)
 
     entities = sorted(ifc_file, key=lambda e: e.id())
@@ -101,7 +98,7 @@ def parse_ifc_and_populate_neo4j(ifc_file_path, driver, database, file_id):
     print("Processing nodes...")
     start_time = time.time()
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(create_nodes_in_batch, driver, batch, file_id, database) for batch in batches]
+        futures = [executor.submit(create_nodes_in_batch, driver, batch, database) for batch in batches]
         for i, future in enumerate(as_completed(futures), 1):
             future.result()  # Wait for batch to complete
             print(f"Processed batch {i}/{len(batches)} (Nodes)")
@@ -113,7 +110,7 @@ def parse_ifc_and_populate_neo4j(ifc_file_path, driver, database, file_id):
     batches = [entities] 
     start_time = time.time()
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(create_relationships_in_batch, driver, batch, file_id, database) for batch in batches]
+        futures = [executor.submit(create_relationships_in_batch, driver, batch, database) for batch in batches]
         for i, future in enumerate(as_completed(futures), 1):
             future.result()
             print(f"Processed batch {i}/{len(batches)} (Relationships)")
@@ -140,8 +137,6 @@ def process_ifc_file(ifc_file_path, neo4j_uri, neo4j_user, neo4j_password, db_na
     database_name = db_name or os.path.splitext(os.path.basename(ifc_file_path))[0]
     database_name = re.sub(r"[^A-Za-z0-9.]", ".", database_name).lower().strip(".")
 
-    file_id = database_name
-
     driver = connect_to_neo4j(neo4j_uri, neo4j_user, neo4j_password)
 
     try:
@@ -150,7 +145,7 @@ def process_ifc_file(ifc_file_path, neo4j_uri, neo4j_user, neo4j_password, db_na
         if clean_db:
             clean_database(driver, database_name)
 
-        parse_ifc_and_populate_neo4j(ifc_file_path, driver, database_name, file_id)
+        parse_ifc_and_populate_neo4j(ifc_file_path, driver, database_name)
 
         print(f"Finished populating the database '{database_name}'.")
     finally:
