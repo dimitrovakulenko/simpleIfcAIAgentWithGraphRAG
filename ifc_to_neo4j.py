@@ -1,6 +1,6 @@
 from typing import Iterable
 import ifcopenshell
-from neo4j import GraphDatabase
+from neo4j import Driver
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -8,20 +8,16 @@ import time
 
 PROCESSING_BATCH_SIZE = 500
 
-def connect_to_neo4j(uri, user, password):
-    driver = GraphDatabase.driver(uri, auth=(user, password))
-    return driver
-
-def create_if_not_exists(driver, database_name):
+def does_database_exist(driver, database_name):
     with driver.session(database="system") as session:
         result = session.run("SHOW DATABASES")
         existing_databases = [record["name"] for record in result]
+        return database_name in existing_databases
 
-        if database_name in existing_databases:
-            print(f"Database '{database_name}' already exists. Skipping creation.")
-        else:
-            session.run(f"CREATE DATABASE {database_name}")
-            print(f"Database '{database_name}' created successfully.")
+def create_database(driver, database_name):   
+    with driver.session(database="system") as session:
+        session.run(f"CREATE DATABASE {database_name}")
+        print(f"Database '{database_name}' created successfully.")
 
 def clean_database(driver, database_name):
     with driver.session(database=database_name) as session:
@@ -120,7 +116,7 @@ def parse_ifc_and_populate_neo4j(ifc_file_path, driver, database):
     total_time = node_time + relationship_time
     print(f"Total processing time: {total_time:.2f} seconds.")
 
-def process_ifc_file(ifc_file_path, neo4j_uri, neo4j_user, neo4j_password, db_name=None, clean_db=True):
+def process_ifc_file(ifc_file_path, driver:Driver, db_name=None, clean_db=True):
     """
     Process an IFC file and populate a Neo4j database with the extracted data.
     All IFC entities will become nodes, all links between ifc entities will become links between nodes.
@@ -137,13 +133,13 @@ def process_ifc_file(ifc_file_path, neo4j_uri, neo4j_user, neo4j_password, db_na
     database_name = db_name or os.path.splitext(os.path.basename(ifc_file_path))[0]
     database_name = re.sub(r"[^A-Za-z0-9.]", ".", database_name).lower().strip(".")
 
-    driver = connect_to_neo4j(neo4j_uri, neo4j_user, neo4j_password)
-
     try:
-        create_if_not_exists(driver, database_name)
-
-        if clean_db:
-            clean_database(driver, database_name)
+        if does_database_exist(driver, database_name):
+            print(f"Database '{database_name}' already exists. Skipping creation.")
+            if clean_db:
+                clean_database(driver, database_name)
+        else:
+            create_database(driver, database_name)
 
         parse_ifc_and_populate_neo4j(ifc_file_path, driver, database_name)
 
