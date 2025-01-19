@@ -16,7 +16,7 @@ async def main():
 
     database_name = "test2.db"
 
-    fill_db = False
+    fill_db = True
 
     driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 
