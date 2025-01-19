@@ -1,2 +1,2 @@
 env/*
-__pycache__/ifc_to_neo4j.cpython-312.pyc
+__pycache__/*
