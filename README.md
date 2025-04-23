@@ -4,6 +4,8 @@
 
 `simpleIfcAIAgentWithGraphRAG` is a minimalistic project designed to showcase a simple AI agent that extracts data from an IFC file stored in a graph database (Neo4j). The project demonstrates the integration of AI, IFC file processing, and graph-based data storage and retrieval using modern tools such as Neo4j, LangGraph, and Azure GPT.
 
+![Simple Ifc AI Agent with GraphRAG Demo](.assets/simpleIfcAIAgent_demo.gif)
+
 The project consists of two primary scripts:
 1. **`ifc_to_neo4j.py`**: Parses an IFC file and stores its data in a Neo4j graph database. It organizes IFC entities as graph nodes and their relationships as graph edges.
 2. **`chatbot.py`**: Implements an AI agent that answers queries about the IFC file by executing Cypher queries on the Neo4j database.
@@ -49,6 +51,10 @@ This project is modular and can be adapted to other databases or in-memory graph
    - The chatbot will launch in a terminal-based interactive mode.
    - Type your query, and the chatbot will translate it into a database query and return the results.
    - To exit, type `exit`, `quit`, or `bye`.
+  
+4. **(Optional) Inspect your Ifc database in neo4j desktop**
+
+![Inspect your Ifc database in neo4j desktop](.assets/neo4j_inspect_walls.gif)
 
 ## Limitations
 
